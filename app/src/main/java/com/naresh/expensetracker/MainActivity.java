@@ -4,6 +4,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -45,7 +48,26 @@ public class MainActivity extends Activity {
             }
         });
 
+        // Lets the JS side trigger Android's native "Save as PDF" print flow.
+        webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
+
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    private class WebAppInterface {
+        @JavascriptInterface
+        public void printReport() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    PrintManager printManager = (PrintManager) getSystemService(PRINT_SERVICE);
+                    if (printManager == null) return;
+                    String jobName = "NET Expense Report";
+                    android.print.PrintDocumentAdapter adapter = webView.createPrintDocumentAdapter(jobName);
+                    printManager.print(jobName, adapter, new PrintAttributes.Builder().build());
+                }
+            });
+        }
     }
 
     @Override

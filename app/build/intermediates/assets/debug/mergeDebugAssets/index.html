@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ledger — Monthly Expenses</title>
+<title>NET — N Expense Tracker</title>
 <style>
   :root{
     --ink:#10151c;
@@ -97,6 +97,13 @@
   .cat-row .name{flex:1; font-size:13.5px;}
   .cat-row .amt{font-size:13.5px; font-weight:600;}
   .cat-row .pct{color:var(--muted); font-size:11px; width:34px; text-align:right;}
+  .cat-row-wrap{padding:9px 0; border-bottom:1px solid var(--line);}
+  .cat-row-wrap:last-child{border-bottom:none;}
+  .cat-row-wrap .cat-row{padding:0 0 6px; border-bottom:none;}
+  .cat-mini-bar{height:5px; border-radius:4px; background:var(--panel-2); overflow:hidden; margin-top:2px;}
+  .cat-mini-bar .fill{height:100%; background:var(--gold);}
+  .cat-mini-bar .fill.over{background:var(--loss);}
+  .cat-budget-note{color:var(--muted); font-size:10px; margin-top:3px;}
 
   .entry-group{margin-bottom:4px;}
   .entry-date{color:var(--muted); font-size:11px; padding:10px 0 4px; text-transform:uppercase; letter-spacing:.06em;}
@@ -156,6 +163,26 @@
     font-size:15px; font-weight:700; margin-top:6px; cursor:pointer; font-family:inherit;
   }
   .link-btn{background:none;border:none;color:var(--muted); font-size:12px; text-align:center; width:100%; padding:10px 0 0; cursor:pointer;}
+
+  #printReport{display:none;}
+  @media print{
+    header, .fab, .sheet-backdrop, .sheet, main > .summary + .budget-bar-wrap, #addBtn{display:none !important;}
+    body{background:#fff !important; color:#111 !important; padding-bottom:0 !important;}
+    main{display:none !important;}
+    #printReport{
+      display:block !important;
+      color:#111; font-family: Georgia, serif; padding:10px;
+    }
+    #printReport h1{font-size:20px; margin-bottom:2px;}
+    #printReport .pr-sub{color:#555; font-size:12px; margin-bottom:18px;}
+    #printReport table{width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px;}
+    #printReport th, #printReport td{border-bottom:1px solid #ccc; text-align:left; padding:5px 6px;}
+    #printReport th{color:#555; font-size:10px; text-transform:uppercase; letter-spacing:.04em;}
+    #printReport .pr-summary{display:flex; gap:20px; margin-bottom:20px;}
+    #printReport .pr-summary div{font-size:13px;}
+    #printReport .pr-summary b{display:block; font-size:16px;}
+    #printReport h2{font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:#333; margin:18px 0 8px;}
+  }
 </style>
 </head>
 <body data-theme="dark">
@@ -164,10 +191,12 @@
   <div class="top-row">
     <div class="brand">
       <span class="mark"></span>
-      <h1>Ledger</h1>
+      <h1>NET</h1>
+      <small>N Expense Tracker</small>
     </div>
     <div style="display:flex; gap:8px;">
       <button class="icon-btn" id="importBtn">⇪</button>
+      <button class="icon-btn" id="exportBtn">⬇</button>
       <button class="icon-btn" id="themeBtn">◐</button>
     </div>
   </div>
@@ -194,7 +223,7 @@
   </div>
 
   <section class="block">
-    <div class="block-head"><h2>By category</h2></div>
+    <div class="block-head"><h2>By category</h2><a id="editCatBudgets" style="color:var(--gold); cursor:pointer; text-decoration:none;">budgets</a></div>
     <div id="catList"></div>
   </section>
 
@@ -245,6 +274,18 @@
   <button class="save-btn" id="saveBudget">Save budget</button>
   <button class="link-btn" id="cancelBudget">Cancel</button>
 </div>
+
+<div class="sheet-backdrop" id="catBudgetBackdrop"></div>
+<div class="sheet" id="catBudgetSheet" style="max-height:85vh;">
+  <div class="sheet-handle"></div>
+  <h3>Category budgets</h3>
+  <div style="color:var(--muted); font-size:12px; margin-bottom:14px;">Set a monthly limit per category. Leave blank for no limit.</div>
+  <div id="catBudgetFields"></div>
+  <button class="save-btn" id="saveCatBudgets">Save</button>
+  <button class="link-btn" id="cancelCatBudgets">Cancel</button>
+</div>
+
+<div id="printReport"></div>
 
 <div class="sheet-backdrop" id="importBackdrop"></div>
 <div class="sheet" id="importSheet" style="max-height:88vh;">
@@ -300,10 +341,12 @@
 
   var STORE_KEY = 'ledger_entries_v1';
   var BUDGET_KEY = 'ledger_budgets_v1';
+  var CAT_BUDGET_KEY = 'ledger_cat_budgets_v1';
   var THEME_KEY = 'ledger_theme_v1';
 
   var entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
   var budgets = JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}');
+  var catBudgets = JSON.parse(localStorage.getItem(CAT_BUDGET_KEY) || '{}');
   var current = new Date();
   var viewYear = current.getFullYear();
   var viewMonth = current.getMonth(); // 0-indexed
@@ -313,6 +356,7 @@
 
   function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
   function saveBudgets(){ localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets)); }
+  function saveCatBudgets(){ localStorage.setItem(CAT_BUDGET_KEY, JSON.stringify(catBudgets)); }
   function fmt(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
   function monthKey(y,m){ return y + '-' + String(m+1).padStart(2,'0'); }
 
@@ -429,6 +473,44 @@
     renderAll();
   });
 
+  // ---------- CATEGORY BUDGET SHEET ----------
+  var catBudgetSheet = document.getElementById('catBudgetSheet');
+  var catBudgetBackdrop = document.getElementById('catBudgetBackdrop');
+  document.getElementById('editCatBudgets').addEventListener('click', function(){
+    var mk = monthKey(viewYear,viewMonth);
+    var current = catBudgets[mk] || {};
+    var wrap = document.getElementById('catBudgetFields');
+    wrap.innerHTML = '';
+    CATS.forEach(function(c){
+      var field = document.createElement('div');
+      field.className = 'field';
+      field.innerHTML =
+        '<label>'+c.icon+' '+c.name+'</label>' +
+        '<input type="number" inputmode="decimal" data-cat="'+c.id+'" placeholder="No limit" value="'+(current[c.id] || '')+'">';
+      wrap.appendChild(field);
+    });
+    catBudgetSheet.classList.add('open'); catBudgetBackdrop.classList.add('open');
+  });
+  document.getElementById('cancelCatBudgets').addEventListener('click', function(){
+    catBudgetSheet.classList.remove('open'); catBudgetBackdrop.classList.remove('open');
+  });
+  catBudgetBackdrop.addEventListener('click', function(){
+    catBudgetSheet.classList.remove('open'); catBudgetBackdrop.classList.remove('open');
+  });
+  document.getElementById('saveCatBudgets').addEventListener('click', function(){
+    var mk = monthKey(viewYear,viewMonth);
+    var vals = {};
+    var inputs = document.getElementById('catBudgetFields').querySelectorAll('input');
+    Array.prototype.forEach.call(inputs, function(inp){
+      var v = parseFloat(inp.value);
+      if (v > 0) vals[inp.getAttribute('data-cat')] = v;
+    });
+    catBudgets[mk] = vals;
+    saveCatBudgets();
+    catBudgetSheet.classList.remove('open'); catBudgetBackdrop.classList.remove('open');
+    renderAll();
+  });
+
   // ---------- RENDER ----------
   function monthEntries(){
     return entries.filter(function(e){
@@ -474,6 +556,7 @@
     // category list
     var catList = document.getElementById('catList');
     var catIds = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+    var monthCatBudgets = catBudgets[monthKey(viewYear,viewMonth)] || {};
     if (catIds.length===0){
       catList.innerHTML = '<div class="empty">No expenses yet this month</div>';
     } else {
@@ -481,13 +564,29 @@
       catIds.forEach(function(id){
         var info = catInfo(id,false);
         var pct = spent>0 ? Math.round((byCat[id]/spent)*100) : 0;
+        var wrap = document.createElement('div');
+        wrap.className = 'cat-row-wrap';
         var row = document.createElement('div');
         row.className = 'cat-row';
         row.innerHTML = '<span class="cat-dot" style="background:'+info.color+'"></span>' +
           '<span class="name">'+info.icon+' '+info.name+'</span>' +
           '<span class="amt">'+fmt(byCat[id])+'</span>' +
           '<span class="pct">'+pct+'%</span>';
-        catList.appendChild(row);
+        wrap.appendChild(row);
+        var catBudget = monthCatBudgets[id];
+        if (catBudget){
+          var barPct = Math.min(100, (byCat[id]/catBudget)*100);
+          var over = byCat[id] > catBudget;
+          var barWrap = document.createElement('div');
+          barWrap.className = 'cat-mini-bar';
+          barWrap.innerHTML = '<div class="fill'+(over?' over':'')+'" style="width:'+barPct+'%"></div>';
+          wrap.appendChild(barWrap);
+          var note = document.createElement('div');
+          note.className = 'cat-budget-note';
+          note.textContent = fmt(byCat[id]) + ' of ' + fmt(catBudget) + (over ? ' — over budget' : ' budget');
+          wrap.appendChild(note);
+        }
+        catList.appendChild(wrap);
       });
     }
 
@@ -508,8 +607,11 @@
         g.className = 'entry-group';
         var dLabel = document.createElement('div');
         dLabel.className = 'entry-date';
+        dLabel.style.cssText = 'display:flex; justify-content:space-between;';
         var d = new Date(date);
-        dLabel.textContent = d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+        var dayTotal = groups[date].reduce(function(s,e){ return s + (e.type==='expense' ? e.amount : 0); }, 0);
+        dLabel.innerHTML = '<span>'+d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'})+'</span>' +
+          '<span>'+fmt(dayTotal)+'</span>';
         g.appendChild(dLabel);
         groups[date].forEach(function(e){
           var info = catInfo(e.category, e.type==='income');
@@ -670,6 +772,58 @@
     var last = new Date(parsedEntries[parsedEntries.length-1].date);
     viewYear = last.getFullYear(); viewMonth = last.getMonth();
     renderAll();
+  });
+
+  // ---------- PDF / PRINT EXPORT ----------
+  function buildPrintReport(){
+    var list = monthEntries();
+    var spent=0, income=0, byCat={};
+    list.forEach(function(e){
+      if (e.type==='expense'){ spent += e.amount; byCat[e.category]=(byCat[e.category]||0)+e.amount; }
+      else { income += e.amount; }
+    });
+    var html = '<h1>N Expense Tracker</h1>' +
+      '<div class="pr-sub">' + monthNames[viewMonth] + ' ' + viewYear + ' — report generated ' + new Date().toLocaleDateString('en-IN') + '</div>' +
+      '<div class="pr-summary">' +
+        '<div>Spent<b>'+fmt(spent)+'</b></div>' +
+        '<div>Income<b>'+fmt(income)+'</b></div>' +
+        '<div>Balance<b>'+fmt(income-spent)+'</b></div>' +
+      '</div>';
+
+    var catIds = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+    if (catIds.length){
+      html += '<h2>By category</h2><table><tr><th>Category</th><th>Amount</th><th>% of spend</th></tr>';
+      catIds.forEach(function(id){
+        var info = catInfo(id,false);
+        var pct = spent>0 ? Math.round((byCat[id]/spent)*100) : 0;
+        html += '<tr><td>'+info.icon+' '+info.name+'</td><td>'+fmt(byCat[id])+'</td><td>'+pct+'%</td></tr>';
+      });
+      html += '</table>';
+    }
+
+    if (list.length){
+      html += '<h2>All entries</h2><table><tr><th>Date</th><th>Category</th><th>Note</th><th>Amount</th></tr>';
+      list.slice().reverse().forEach(function(e){
+        var info = catInfo(e.category, e.type==='income');
+        var d = new Date(e.date).toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+        var amt = (e.type==='income'?'+':'−') + fmt(e.amount);
+        html += '<tr><td>'+d+'</td><td>'+info.icon+' '+info.name+'</td><td>'+(e.note||'')+'</td><td>'+amt+'</td></tr>';
+      });
+      html += '</table>';
+    }
+
+    document.getElementById('printReport').innerHTML = html;
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', function(){
+    buildPrintReport();
+    setTimeout(function(){
+      if (window.AndroidBridge && window.AndroidBridge.printReport){
+        window.AndroidBridge.printReport();
+      } else {
+        window.print();
+      }
+    }, 50);
   });
 
   renderChips();

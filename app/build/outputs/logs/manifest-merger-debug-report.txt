@@ -18,7 +18,7 @@ INJECTED from D:\ExpenseTracker\app\src\main\AndroidManifest.xml:4:5-19:19
 	android:extractNativeLibs
 		INJECTED from D:\ExpenseTracker\app\src\main\AndroidManifest.xml
 	android:label
-		ADDED from D:\ExpenseTracker\app\src\main\AndroidManifest.xml:7:9-31
+		ADDED from D:\ExpenseTracker\app\src\main\AndroidManifest.xml:7:9-41
 	android:icon
 		ADDED from D:\ExpenseTracker\app\src\main\AndroidManifest.xml:6:9-43
 	android:allowBackup
