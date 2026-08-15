@@ -1,0 +1,44 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.naresh.expensetracker"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="34" />
+10
+11    <application
+11-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:4:5-19:19
+12        android:allowBackup="true"
+12-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:5:9-35
+13        android:debuggable="true"
+14        android:extractNativeLibs="false"
+15        android:icon="@mipmap/ic_launcher"
+15-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:6:9-43
+16        android:label="Ledger"
+16-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:7:9-31
+17        android:theme="@android:style/Theme.Material.NoActionBar" >
+17-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:8:9-66
+18        <activity
+18-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:10:9-18:20
+19            android:name="com.naresh.expensetracker.MainActivity"
+19-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:11:13-41
+20            android:exported="true"
+20-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:12:13-36
+21            android:screenOrientation="portrait" >
+21-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:13:13-49
+22            <intent-filter>
+22-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:14:13-17:29
+23                <action android:name="android.intent.action.MAIN" />
+23-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:15:17-69
+23-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:15:25-66
+24
+25                <category android:name="android.intent.category.LAUNCHER" />
+25-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:16:17-77
+25-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:16:27-74
+26            </intent-filter>
+27        </activity>
+28    </application>
+29
+30</manifest>

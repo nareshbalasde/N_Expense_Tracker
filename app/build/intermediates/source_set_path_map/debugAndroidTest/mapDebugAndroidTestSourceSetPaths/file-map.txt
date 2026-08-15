@@ -1,0 +1,5 @@
+com.naresh.expensetracker.test.app-androidTest-0 D:\ExpenseTracker\app\build\generated\res\resValues\androidTest\debug
+com.naresh.expensetracker.test.app-updated_navigation_xml-1 D:\ExpenseTracker\app\build\generated\updated_navigation_xml\debugAndroidTest
+com.naresh.expensetracker.test.app-mergeDebugAndroidTestResources-2 D:\ExpenseTracker\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.naresh.expensetracker.test.app-mergeDebugAndroidTestResources-3 D:\ExpenseTracker\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.naresh.expensetracker.test.app-debugAndroidTest-4 D:\ExpenseTracker\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

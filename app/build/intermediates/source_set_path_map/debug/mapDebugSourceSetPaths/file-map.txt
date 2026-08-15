@@ -1,0 +1,8 @@
+com.naresh.expensetracker.app-pngs-0 D:\ExpenseTracker\app\build\generated\res\pngs\debug
+com.naresh.expensetracker.app-resValues-1 D:\ExpenseTracker\app\build\generated\res\resValues\debug
+com.naresh.expensetracker.app-updated_navigation_xml-2 D:\ExpenseTracker\app\build\generated\updated_navigation_xml\debug
+com.naresh.expensetracker.app-packageDebugResources-3 D:\ExpenseTracker\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.naresh.expensetracker.app-packageDebugResources-4 D:\ExpenseTracker\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.naresh.expensetracker.app-debug-5 D:\ExpenseTracker\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.naresh.expensetracker.app-debug-6 D:\ExpenseTracker\app\src\debug\res
+com.naresh.expensetracker.app-main-7 D:\ExpenseTracker\app\src\main\res

@@ -1,0 +1,3 @@
+com.naresh.expensetracker:string/app_name = 0x7f030000
+com.naresh.expensetracker:mipmap/ic_launcher = 0x7f020000
+com.naresh.expensetracker:drawable/ic_launcher_background = 0x7f010000

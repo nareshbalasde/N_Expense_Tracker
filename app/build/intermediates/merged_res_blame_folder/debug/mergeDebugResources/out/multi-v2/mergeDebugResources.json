@@ -1,0 +1,26 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.naresh.expensetracker.app-debug-4:/values_values.arsc.flat",
+            "map": [
+                {
+                    "source": "D:\\ExpenseTracker\\app\\src\\main\\res\\values\\strings.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "16",
+                        "endColumns": "43",
+                        "endOffsets": "55"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "43",
+                        "endOffsets": "94"
+                    }
+                }
+            ]
+        }
+    ]
+}

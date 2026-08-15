@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ledger — Monthly Expenses</title>
+<style>
+  :root{
+    --ink:#10151c;
+    --panel:#161d27;
+    --panel-2:#1c2530;
+    --line: rgba(233,237,243,0.08);
+    --text:#e9edf3;
+    --muted:#8a95a6;
+    --gain:#3ddc97;
+    --loss:#ff6b5e;
+    --gold:#e8b04b;
+    --radius:14px;
+  }
+  [data-theme="light"]{
+    --ink:#f4f1ea;
+    --panel:#ffffff;
+    --panel-2:#faf8f3;
+    --line: rgba(16,21,28,0.10);
+    --text:#1b2129;
+    --muted:#6b7280;
+    --gain:#1c8a5f;
+    --loss:#c94a3d;
+    --gold:#a8762f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family: ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:90px;
+    transition:background .25s ease, color .25s ease;
+  }
+  .display{ font-family: Georgia, "Noto Serif", serif; }
+
+  header{
+    position:sticky; top:0; z-index:20;
+    background:var(--ink);
+    padding:18px 18px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .top-row{display:flex; align-items:center; justify-content:space-between;}
+  .brand{display:flex; align-items:baseline; gap:8px;}
+  .brand .mark{width:9px;height:9px;border-radius:2px;background:var(--gold); display:inline-block;}
+  .brand h1{font-size:17px; margin:0; letter-spacing:.02em; font-weight:600;}
+  .brand small{color:var(--muted); font-size:11px;}
+  .icon-btn{
+    background:var(--panel); border:1px solid var(--line); color:var(--text);
+    width:36px;height:36px;border-radius:10px; display:flex;align-items:center;justify-content:center;
+    font-size:16px; cursor:pointer;
+  }
+  .month-nav{display:flex; align-items:center; justify-content:space-between; margin-top:14px;}
+  .month-nav button{background:none;border:none;color:var(--muted);font-size:18px;padding:4px 10px;cursor:pointer;}
+  .month-label{font-family: Georgia, serif; font-size:19px; font-weight:600; letter-spacing:.01em;}
+
+  main{padding:16px 18px 0;}
+
+  .summary{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 12px;
+  }
+  .card .k{color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;}
+  .card .v{font-size:16px; font-weight:700; margin-top:6px; font-family: Georgia, serif;}
+  .v.gain{color:var(--gain);}
+  .v.loss{color:var(--loss);}
+
+  .budget-bar-wrap{margin-bottom:18px;}
+  .budget-bar-wrap .label-row{display:flex; justify-content:space-between; font-size:11.5px; color:var(--muted); margin-bottom:6px;}
+  .budget-bar{height:8px; border-radius:6px; background:var(--panel-2); overflow:hidden; border:1px solid var(--line);}
+  .budget-bar .fill{height:100%; background:var(--gold); transition:width .3s ease;}
+  .budget-bar .fill.over{background:var(--loss);}
+
+  section.block{margin-bottom:22px;}
+  .block-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .block-head h2{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:0; font-weight:600;}
+  .block-head a{color:var(--gold); font-size:12px; cursor:pointer; text-decoration:none;}
+
+  canvas#chart{width:100%; height:150px; display:block;}
+
+  .cat-row{
+    display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line);
+  }
+  .cat-row:last-child{border-bottom:none;}
+  .cat-dot{width:8px;height:8px;border-radius:50%; flex-shrink:0;}
+  .cat-row .name{flex:1; font-size:13.5px;}
+  .cat-row .amt{font-size:13.5px; font-weight:600;}
+  .cat-row .pct{color:var(--muted); font-size:11px; width:34px; text-align:right;}
+
+  .entry-group{margin-bottom:4px;}
+  .entry-date{color:var(--muted); font-size:11px; padding:10px 0 4px; text-transform:uppercase; letter-spacing:.06em;}
+  .entry{
+    display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:11px 12px; margin-bottom:8px;
+  }
+  .entry .cat-dot{width:34px;height:34px;border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:15px; background:var(--panel-2); flex-shrink:0;}
+  .entry .mid{flex:1; min-width:0;}
+  .entry .mid .cat{font-size:13.5px; font-weight:600;}
+  .entry .mid .sub{color:var(--muted); font-size:11.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .entry .amt{font-weight:700; font-size:14px;}
+  .entry .amt.loss{color:var(--loss);}
+  .entry .amt.gain{color:var(--gain);}
+  .entry .del{color:var(--muted); font-size:16px; padding:4px 2px; cursor:pointer;}
+
+  .empty{color:var(--muted); font-size:13px; text-align:center; padding:30px 10px; border:1px dashed var(--line); border-radius:12px;}
+
+  .fab{
+    position:fixed; right:18px; bottom:22px; width:56px; height:56px; border-radius:50%;
+    background:var(--gold); color:#151515; border:none; font-size:26px; font-weight:400;
+    box-shadow:0 8px 20px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:30;
+  }
+
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:40; display:none;
+  }
+  .sheet-backdrop.open{display:block;}
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:50;
+    background:var(--panel); border-radius:20px 20px 0 0; padding:18px 18px 24px;
+    transform:translateY(100%); transition:transform .28s ease; max-height:88vh; overflow-y:auto;
+    border-top:1px solid var(--line);
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--line); border-radius:3px; margin:0 auto 16px;}
+  .sheet h3{margin:0 0 16px; font-family:Georgia,serif; font-size:18px;}
+  .seg{display:flex; background:var(--panel-2); border-radius:10px; padding:3px; margin-bottom:16px; border:1px solid var(--line);}
+  .seg button{flex:1; background:none; border:none; color:var(--muted); padding:9px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit;}
+  .seg button.active{background:var(--gold); color:#151515;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:11px 12px; border-radius:10px; font-size:15px; font-family:inherit;
+  }
+  .field .amount-input{font-size:22px; font-weight:700; font-family:Georgia,serif;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:8px 12px; border-radius:20px; font-size:12.5px; cursor:pointer; white-space:nowrap;
+  }
+  .chip.active{background:var(--gold); color:#151515; border-color:var(--gold);}
+  .save-btn{
+    width:100%; background:var(--gold); color:#151515; border:none; padding:14px; border-radius:12px;
+    font-size:15px; font-weight:700; margin-top:6px; cursor:pointer; font-family:inherit;
+  }
+  .link-btn{background:none;border:none;color:var(--muted); font-size:12px; text-align:center; width:100%; padding:10px 0 0; cursor:pointer;}
+</style>
+</head>
+<body data-theme="dark">
+
+<header>
+  <div class="top-row">
+    <div class="brand">
+      <span class="mark"></span>
+      <h1>Ledger</h1>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="importBtn">⇪</button>
+      <button class="icon-btn" id="themeBtn">◐</button>
+    </div>
+  </div>
+  <div class="month-nav">
+    <button id="prevMonth">‹</button>
+    <div class="month-label" id="monthLabel"></div>
+    <button id="nextMonth">›</button>
+  </div>
+</header>
+
+<main>
+  <div class="summary">
+    <div class="card"><div class="k">Spent</div><div class="v loss" id="sumSpent">₹0</div></div>
+    <div class="card"><div class="k">Income</div><div class="v gain" id="sumIncome">₹0</div></div>
+    <div class="card"><div class="k">Balance</div><div class="v" id="sumBalance">₹0</div></div>
+  </div>
+
+  <div class="budget-bar-wrap">
+    <div class="label-row">
+      <span id="budgetLabel">Monthly budget not set</span>
+      <a id="editBudget" style="color:var(--gold); cursor:pointer;">set</a>
+    </div>
+    <div class="budget-bar"><div class="fill" id="budgetFill" style="width:0%"></div></div>
+  </div>
+
+  <section class="block">
+    <div class="block-head"><h2>By category</h2></div>
+    <div id="catList"></div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2>Entries</h2></div>
+    <div id="entryList"></div>
+  </section>
+</main>
+
+<button class="fab" id="addBtn">+</button>
+
+<div class="sheet-backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <h3 id="sheetTitle">Add entry</h3>
+  <div class="seg">
+    <button type="button" class="active" id="segExpense">Expense</button>
+    <button type="button" id="segIncome">Income</button>
+  </div>
+  <div class="field">
+    <label>Amount (₹)</label>
+    <input type="number" inputmode="decimal" class="amount-input" id="fAmount" placeholder="0">
+  </div>
+  <div class="field" id="catField">
+    <label>Category</label>
+    <div class="chip-row" id="catChips"></div>
+  </div>
+  <div class="field">
+    <label>Note (optional)</label>
+    <input type="text" id="fNote" placeholder="e.g. groceries, auto fare">
+  </div>
+  <div class="field">
+    <label>Date</label>
+    <input type="date" id="fDate">
+  </div>
+  <button class="save-btn" id="saveEntry">Save entry</button>
+  <button class="link-btn" id="cancelSheet">Cancel</button>
+</div>
+
+<div class="sheet-backdrop" id="budgetBackdrop"></div>
+<div class="sheet" id="budgetSheet">
+  <div class="sheet-handle"></div>
+  <h3>Monthly budget</h3>
+  <div class="field">
+    <label>Budget for this month (₹)</label>
+    <input type="number" inputmode="decimal" class="amount-input" id="fBudget" placeholder="0">
+  </div>
+  <button class="save-btn" id="saveBudget">Save budget</button>
+  <button class="link-btn" id="cancelBudget">Cancel</button>
+</div>
+
+<div class="sheet-backdrop" id="importBackdrop"></div>
+<div class="sheet" id="importSheet" style="max-height:88vh;">
+  <div class="sheet-handle"></div>
+  <h3>Import from file</h3>
+
+  <div id="importStep1">
+    <div class="field">
+      <label>Choose a .txt file</label>
+      <input type="file" id="fileInput" accept=".txt,text/plain">
+    </div>
+    <div class="empty" style="text-align:left; padding:16px; line-height:1.6;">
+      Expected format:<br>
+      <span style="color:var(--text);">01/08/2026</span><br>
+      Tea-30<br>
+      Lunch-95<br>
+      <span style="color:var(--text);">02/08/2026</span><br>
+      Bus - 22<br><br>
+      A date line, then one "Item-Amount" per line for that day. Everything gets read as an expense — you'll get to fix categories before anything is added.
+    </div>
+  </div>
+
+  <div id="importStep2" style="display:none;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:12.5px; color:var(--muted);">
+      <span id="importCount"></span>
+      <span id="importTotal"></span>
+    </div>
+    <div id="importPreview" style="max-height:42vh; overflow-y:auto;"></div>
+    <button class="save-btn" id="confirmImport">Import all</button>
+    <button class="link-btn" id="cancelImportPreview">Back</button>
+  </div>
+
+  <button class="link-btn" id="cancelImport">Cancel</button>
+</div>
+
+<script>
+(function(){
+  var CATS = [
+    {id:'food', name:'Food', icon:'🍛', color:'#e8b04b'},
+    {id:'transport', name:'Transport', icon:'🚌', color:'#5aa9e6'},
+    {id:'bills', name:'Bills', icon:'🧾', color:'#ff6b5e'},
+    {id:'rent', name:'Rent', icon:'🏠', color:'#9b7ede'},
+    {id:'shopping', name:'Shopping', icon:'🛍️', color:'#3ddc97'},
+    {id:'health', name:'Health', icon:'💊', color:'#e05c8a'},
+    {id:'entertainment', name:'Fun', icon:'🎬', color:'#f2a65a'},
+    {id:'other', name:'Other', icon:'•', color:'#8a95a6'}
+  ];
+  var INCOME_CATS = [
+    {id:'salary', name:'Salary', icon:'💼', color:'#3ddc97'},
+    {id:'freelance', name:'Freelance', icon:'💻', color:'#5aa9e6'},
+    {id:'other_income', name:'Other', icon:'•', color:'#e8b04b'}
+  ];
+
+  var STORE_KEY = 'ledger_entries_v1';
+  var BUDGET_KEY = 'ledger_budgets_v1';
+  var THEME_KEY = 'ledger_theme_v1';
+
+  var entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+  var budgets = JSON.parse(localStorage.getItem(BUDGET_KEY) || '{}');
+  var current = new Date();
+  var viewYear = current.getFullYear();
+  var viewMonth = current.getMonth(); // 0-indexed
+
+  var mode = 'expense';
+  var selectedCat = null;
+
+  function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(entries)); }
+  function saveBudgets(){ localStorage.setItem(BUDGET_KEY, JSON.stringify(budgets)); }
+  function fmt(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+  function monthKey(y,m){ return y + '-' + String(m+1).padStart(2,'0'); }
+
+  function catInfo(id, isIncome){
+    var list = isIncome ? INCOME_CATS : CATS;
+    for (var i=0;i<list.length;i++) if (list[i].id===id) return list[i];
+    return list[list.length-1];
+  }
+
+  // ---------- THEME ----------
+  var savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+  document.body.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeBtn').textContent = savedTheme==='dark' ? '◐' : '◑';
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    var t = document.body.getAttribute('data-theme')==='dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-theme', t);
+    localStorage.setItem(THEME_KEY, t);
+    this.textContent = t==='dark' ? '◐' : '◑';
+  });
+
+  // ---------- MONTH NAV ----------
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function renderMonthLabel(){
+    document.getElementById('monthLabel').textContent = monthNames[viewMonth] + ' ' + viewYear;
+  }
+  document.getElementById('prevMonth').addEventListener('click', function(){
+    viewMonth--; if (viewMonth<0){viewMonth=11; viewYear--;}
+    renderAll();
+  });
+  document.getElementById('nextMonth').addEventListener('click', function(){
+    viewMonth++; if (viewMonth>11){viewMonth=0; viewYear++;}
+    renderAll();
+  });
+
+  // ---------- ENTRY SHEET ----------
+  var sheet = document.getElementById('sheet');
+  var backdrop = document.getElementById('backdrop');
+  function openSheet(){
+    document.getElementById('fDate').value = new Date().toISOString().slice(0,10);
+    setMode('expense');
+    document.getElementById('fAmount').value='';
+    document.getElementById('fNote').value='';
+    sheet.classList.add('open'); backdrop.classList.add('open');
+  }
+  function closeSheet(){ sheet.classList.remove('open'); backdrop.classList.remove('open'); }
+  document.getElementById('addBtn').addEventListener('click', openSheet);
+  document.getElementById('cancelSheet').addEventListener('click', closeSheet);
+  backdrop.addEventListener('click', closeSheet);
+
+  function setMode(m){
+    mode = m;
+    document.getElementById('segExpense').classList.toggle('active', m==='expense');
+    document.getElementById('segIncome').classList.toggle('active', m==='income');
+    renderChips();
+  }
+  document.getElementById('segExpense').addEventListener('click', function(){ setMode('expense'); });
+  document.getElementById('segIncome').addEventListener('click', function(){ setMode('income'); });
+
+  function renderChips(){
+    var list = mode==='expense' ? CATS : INCOME_CATS;
+    selectedCat = list[0].id;
+    var wrap = document.getElementById('catChips');
+    wrap.innerHTML = '';
+    list.forEach(function(c){
+      var chip = document.createElement('div');
+      chip.className = 'chip' + (c.id===selectedCat ? ' active' : '');
+      chip.textContent = c.icon + ' ' + c.name;
+      chip.addEventListener('click', function(){
+        selectedCat = c.id;
+        Array.prototype.forEach.call(wrap.children, function(el){ el.classList.remove('active'); });
+        chip.classList.add('active');
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  document.getElementById('saveEntry').addEventListener('click', function(){
+    var amt = parseFloat(document.getElementById('fAmount').value);
+    if (!amt || amt<=0){ document.getElementById('fAmount').focus(); return; }
+    var date = document.getElementById('fDate').value || new Date().toISOString().slice(0,10);
+    entries.push({
+      id: Date.now(),
+      type: mode,
+      category: selectedCat,
+      note: document.getElementById('fNote').value.trim(),
+      amount: amt,
+      date: date
+    });
+    save();
+    closeSheet();
+    var d = new Date(date);
+    viewYear = d.getFullYear(); viewMonth = d.getMonth();
+    renderAll();
+  });
+
+  // ---------- BUDGET SHEET ----------
+  var budgetSheet = document.getElementById('budgetSheet');
+  var budgetBackdrop = document.getElementById('budgetBackdrop');
+  document.getElementById('editBudget').addEventListener('click', function(){
+    document.getElementById('fBudget').value = budgets[monthKey(viewYear,viewMonth)] || '';
+    budgetSheet.classList.add('open'); budgetBackdrop.classList.add('open');
+  });
+  document.getElementById('cancelBudget').addEventListener('click', function(){
+    budgetSheet.classList.remove('open'); budgetBackdrop.classList.remove('open');
+  });
+  budgetBackdrop.addEventListener('click', function(){
+    budgetSheet.classList.remove('open'); budgetBackdrop.classList.remove('open');
+  });
+  document.getElementById('saveBudget').addEventListener('click', function(){
+    var val = parseFloat(document.getElementById('fBudget').value) || 0;
+    budgets[monthKey(viewYear,viewMonth)] = val;
+    saveBudgets();
+    budgetSheet.classList.remove('open'); budgetBackdrop.classList.remove('open');
+    renderAll();
+  });
+
+  // ---------- RENDER ----------
+  function monthEntries(){
+    return entries.filter(function(e){
+      var d = new Date(e.date);
+      return d.getFullYear()===viewYear && d.getMonth()===viewMonth;
+    }).sort(function(a,b){ return new Date(b.date)-new Date(a.date) || b.id-a.id; });
+  }
+
+  function renderAll(){
+    renderMonthLabel();
+    var list = monthEntries();
+    var spent=0, income=0;
+    var byCat = {};
+    list.forEach(function(e){
+      if (e.type==='expense'){
+        spent += e.amount;
+        byCat[e.category] = (byCat[e.category]||0) + e.amount;
+      } else {
+        income += e.amount;
+      }
+    });
+    document.getElementById('sumSpent').textContent = fmt(spent);
+    document.getElementById('sumIncome').textContent = fmt(income);
+    var bal = income - spent;
+    var balEl = document.getElementById('sumBalance');
+    balEl.textContent = fmt(bal);
+    balEl.className = 'v ' + (bal>=0 ? 'gain':'loss');
+
+    // budget bar
+    var budget = budgets[monthKey(viewYear,viewMonth)] || 0;
+    var fill = document.getElementById('budgetFill');
+    var label = document.getElementById('budgetLabel');
+    if (budget>0){
+      var pct = Math.min(100, (spent/budget)*100);
+      fill.style.width = pct+'%';
+      fill.classList.toggle('over', spent>budget);
+      label.textContent = fmt(spent) + ' of ' + fmt(budget) + ' spent';
+    } else {
+      fill.style.width = '0%';
+      label.textContent = 'Monthly budget not set';
+    }
+
+    // category list
+    var catList = document.getElementById('catList');
+    var catIds = Object.keys(byCat).sort(function(a,b){ return byCat[b]-byCat[a]; });
+    if (catIds.length===0){
+      catList.innerHTML = '<div class="empty">No expenses yet this month</div>';
+    } else {
+      catList.innerHTML = '';
+      catIds.forEach(function(id){
+        var info = catInfo(id,false);
+        var pct = spent>0 ? Math.round((byCat[id]/spent)*100) : 0;
+        var row = document.createElement('div');
+        row.className = 'cat-row';
+        row.innerHTML = '<span class="cat-dot" style="background:'+info.color+'"></span>' +
+          '<span class="name">'+info.icon+' '+info.name+'</span>' +
+          '<span class="amt">'+fmt(byCat[id])+'</span>' +
+          '<span class="pct">'+pct+'%</span>';
+        catList.appendChild(row);
+      });
+    }
+
+    // entries list grouped by date
+    var entryList = document.getElementById('entryList');
+    if (list.length===0){
+      entryList.innerHTML = '<div class="empty">Tap + to add your first entry</div>';
+    } else {
+      entryList.innerHTML = '';
+      var groups = {};
+      var order = [];
+      list.forEach(function(e){
+        if (!groups[e.date]){ groups[e.date]=[]; order.push(e.date); }
+        groups[e.date].push(e);
+      });
+      order.forEach(function(date){
+        var g = document.createElement('div');
+        g.className = 'entry-group';
+        var dLabel = document.createElement('div');
+        dLabel.className = 'entry-date';
+        var d = new Date(date);
+        dLabel.textContent = d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'});
+        g.appendChild(dLabel);
+        groups[date].forEach(function(e){
+          var info = catInfo(e.category, e.type==='income');
+          var row = document.createElement('div');
+          row.className = 'entry';
+          row.innerHTML =
+            '<div class="cat-dot" style="color:'+info.color+'">'+info.icon+'</div>' +
+            '<div class="mid"><div class="cat">'+info.name+'</div>' +
+            '<div class="sub">'+(e.note || '&nbsp;')+'</div></div>' +
+            '<div class="amt '+(e.type==='income'?'gain':'loss')+'">'+(e.type==='income'?'+':'−')+fmt(e.amount).replace('₹','₹')+'</div>' +
+            '<div class="del" data-id="'+e.id+'">✕</div>';
+          g.appendChild(row);
+        });
+        entryList.appendChild(g);
+      });
+      Array.prototype.forEach.call(entryList.querySelectorAll('.del'), function(btn){
+        btn.addEventListener('click', function(){
+          var id = parseFloat(btn.getAttribute('data-id'));
+          entries = entries.filter(function(e){ return e.id!==id; });
+          save();
+          renderAll();
+        });
+      });
+    }
+  }
+
+  // ---------- IMPORT FROM FILE ----------
+  var importSheet = document.getElementById('importSheet');
+  var importBackdrop = document.getElementById('importBackdrop');
+  var parsedEntries = [];
+
+  var CATEGORY_RULES = [
+    {cat:'food', words:['tea','lunch','dinner','breakfast','snack','cooldrink','cool drink','boost','sweet','popcorn','coffee','milk','curd','tiffin','juice','fruit','veg','egg','biryani','food','ice cream']},
+    {cat:'transport', words:['bus','train','rapido','auto','cab','ola','uber','petrol','fuel','ticket','metro','toll','parking']},
+    {cat:'bills', words:['recharge','electricity','current bill','wifi','broadband','gas ','phone bill','emi','insurance','dth']},
+    {cat:'rent', words:['rent']},
+    {cat:'health', words:['medicine','tablet','doctor','hospital','clinic','pharmacy','toothpaste']},
+    {cat:'shopping', words:['perfume','cream','moisturizer','sunscreen','soap','shampoo','dress','cloth','surf','bucket','cosmetic','shoe','bag','detergent']},
+    {cat:'entertainment', words:['movie','outing','function','party','gift','trip']}
+  ];
+  function guessCategory(note){
+    var n = note.toLowerCase();
+    for (var i=0;i<CATEGORY_RULES.length;i++){
+      for (var j=0;j<CATEGORY_RULES[i].words.length;j++){
+        if (n.indexOf(CATEGORY_RULES[i].words[j])!==-1) return CATEGORY_RULES[i].cat;
+      }
+    }
+    return 'other';
+  }
+
+  function parseExpenseFile(text){
+    var lines = text.split(/\r?\n/);
+    var dateRe = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/;
+    var itemRe = /^(.+?)\s*-\s*([\d,]+(?:\.\d+)?)\s*$/;
+    var out = [];
+    var currentDate = null;
+    lines.forEach(function(raw){
+      var line = raw.trim();
+      if (!line) return;
+      var dm = line.match(dateRe);
+      if (dm){
+        var d = parseInt(dm[1],10), m = parseInt(dm[2],10), y = dm[3];
+        if (y.length===2) y = '20'+y;
+        y = parseInt(y,10);
+        if (m>=1 && m<=12 && d>=1 && d<=31){
+          currentDate = y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        }
+        return;
+      }
+      if (!currentDate) return; // skip header lines like "AUGUST Expense"
+      var im = line.match(itemRe);
+      if (im){
+        var note = im[1].trim();
+        var amount = parseFloat(im[2].replace(/,/g,''));
+        if (!isNaN(amount) && amount>0){
+          out.push({date: currentDate, note: note, amount: amount, category: guessCategory(note)});
+        }
+      }
+    });
+    return out;
+  }
+
+  function openImport(){
+    document.getElementById('importStep1').style.display='block';
+    document.getElementById('importStep2').style.display='none';
+    document.getElementById('fileInput').value = '';
+    importSheet.classList.add('open'); importBackdrop.classList.add('open');
+  }
+  function closeImport(){ importSheet.classList.remove('open'); importBackdrop.classList.remove('open'); }
+
+  document.getElementById('importBtn').addEventListener('click', openImport);
+  document.getElementById('cancelImport').addEventListener('click', closeImport);
+  importBackdrop.addEventListener('click', closeImport);
+  document.getElementById('cancelImportPreview').addEventListener('click', function(){
+    document.getElementById('importStep1').style.display='block';
+    document.getElementById('importStep2').style.display='none';
+  });
+
+  document.getElementById('fileInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(evt){
+      parsedEntries = parseExpenseFile(evt.target.result);
+      renderImportPreview();
+    };
+    reader.readAsText(file);
+  });
+
+  function renderImportPreview(){
+    document.getElementById('importStep1').style.display='none';
+    document.getElementById('importStep2').style.display='block';
+    var total = parsedEntries.reduce(function(s,e){return s+e.amount;},0);
+    document.getElementById('importCount').textContent = parsedEntries.length + ' entries found';
+    document.getElementById('importTotal').textContent = fmt(total) + ' total';
+    var wrap = document.getElementById('importPreview');
+    wrap.innerHTML = '';
+    if (parsedEntries.length===0){
+      wrap.innerHTML = '<div class="empty">No entries recognized. Check the file matches the expected date + item-amount format.</div>';
+      return;
+    }
+    parsedEntries.forEach(function(pe){
+      var row = document.createElement('div');
+      row.className = 'entry';
+      var d = new Date(pe.date);
+      var dateLabel = d.toLocaleDateString('en-IN', {day:'numeric', month:'short'});
+      row.innerHTML =
+        '<div class="mid"><div class="cat">'+dateLabel+' — '+pe.note+'</div></div>' +
+        '<div class="amt loss" style="margin-right:8px;">'+fmt(pe.amount)+'</div>';
+      var select = document.createElement('select');
+      select.style.cssText = 'background:var(--panel-2); border:1px solid var(--line); color:var(--text); border-radius:8px; padding:5px 6px; font-size:11px; font-family:inherit; flex-shrink:0;';
+      CATS.forEach(function(c){
+        var opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.icon + ' ' + c.name;
+        if (c.id===pe.category) opt.selected = true;
+        select.appendChild(opt);
+      });
+      select.addEventListener('change', function(){ pe.category = select.value; });
+      row.appendChild(select);
+      wrap.appendChild(row);
+    });
+  }
+
+  document.getElementById('confirmImport').addEventListener('click', function(){
+    if (parsedEntries.length===0){ closeImport(); return; }
+    parsedEntries.forEach(function(pe, i){
+      entries.push({
+        id: Date.now() + i,
+        type: 'expense',
+        category: pe.category,
+        note: pe.note,
+        amount: pe.amount,
+        date: pe.date
+      });
+    });
+    save();
+    closeImport();
+    var last = new Date(parsedEntries[parsedEntries.length-1].date);
+    viewYear = last.getFullYear(); viewMonth = last.getMonth();
+    renderAll();
+  });
+
+  renderChips();
+  renderAll();
+})();
+</script>
+</body>
+</html>
