@@ -6,7 +6,7 @@
 6
 7    <uses-sdk
 8        android:minSdkVersion="26"
-9        android:targetSdkVersion="34" />
+9        android:targetSdkVersion="36" />
 10
 11    <application
 11-->D:\ExpenseTracker\app\src\main\AndroidManifest.xml:4:5-19:19
